@@ -289,6 +289,7 @@ mappedread(znode_t *zp, int nbytes, zfs_uio_t *uio)
 
 		struct page *pp = find_lock_page(mp, start >> PAGE_SHIFT);
 		if (pp) {
+
 			/*
 			 * If filemap_fault() retries there exists a window
 			 * where the page will be unlocked and not up to date.
