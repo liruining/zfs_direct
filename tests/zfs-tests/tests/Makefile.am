@@ -776,6 +776,7 @@ nobase_dist_datadir_zfs_tests_tests_SCRIPTS += \
 	functional/cli_root/zfs_receive/zfs_receive_-wR-encrypted-mix.ksh \
 	functional/cli_root/zfs_receive/zfs_receive_corrective.ksh \
 	functional/cli_root/zfs_receive/zfs_receive_compressed_corrective.ksh \
+	functional/cli_root/zfs_receive/zfs_receive_large_block_corrective.ksh \
 	functional/cli_root/zfs_rename/cleanup.ksh \
 	functional/cli_root/zfs_rename/setup.ksh \
 	functional/cli_root/zfs_rename/zfs_rename_001_pos.ksh \
@@ -1170,6 +1171,8 @@ nobase_dist_datadir_zfs_tests_tests_SCRIPTS += \
 	functional/cli_root/zpool_status/zpool_status_003_pos.ksh \
 	functional/cli_root/zpool_status/zpool_status_004_pos.ksh \
 	functional/cli_root/zpool_status/zpool_status_005_pos.ksh \
+	functional/cli_root/zpool_status/zpool_status_006_pos.ksh \
+	functional/cli_root/zpool_status/zpool_status_007_pos.ksh \
 	functional/cli_root/zpool_status/zpool_status_features_001_pos.ksh \
 	functional/cli_root/zpool_sync/cleanup.ksh \
 	functional/cli_root/zpool_sync/setup.ksh \
@@ -1721,6 +1724,7 @@ nobase_dist_datadir_zfs_tests_tests_SCRIPTS += \
 	functional/removal/removal_with_export.ksh \
 	functional/removal/removal_with_faulted.ksh \
 	functional/removal/removal_with_ganging.ksh \
+	functional/removal/removal_with_indirect.ksh \
 	functional/removal/removal_with_remove.ksh \
 	functional/removal/removal_with_scrub.ksh \
 	functional/removal/removal_with_send.ksh \
@@ -1816,6 +1820,7 @@ nobase_dist_datadir_zfs_tests_tests_SCRIPTS += \
 	functional/rsend/rsend_028_neg.ksh \
 	functional/rsend/rsend_029_neg.ksh \
 	functional/rsend/rsend_030_pos.ksh \
+	functional/rsend/rsend_031_pos.ksh \
 	functional/rsend/send-c_embedded_blocks.ksh \
 	functional/rsend/send-c_incremental.ksh \
 	functional/rsend/send-c_lz4_disabled.ksh \

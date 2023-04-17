@@ -23,15 +23,16 @@
  * Copyright (c) 2022 Tino Reichardt <milky-zfs@mcmilk.de>
  */
 
+#include <sys/simd.h>
 #include <sys/zfs_context.h>
 #include <sys/zfs_impl.h>
 #include <sys/sha2.h>
-#include <sys/simd.h>
 
 #include <sha2/sha2_impl.h>
+#include <sys/asm_linkage.h>
 
 #define	TF(E, N) \
-	extern void E(uint64_t s[8], const void *, size_t); \
+	extern void ASMABI E(uint64_t s[8], const void *, size_t); \
 	static inline void N(uint64_t s[8], const void *d, size_t b) { \
 	kfpu_begin(); E(s, d, b); kfpu_end(); \
 }
@@ -44,10 +45,18 @@ static inline boolean_t sha2_is_supported(void)
 
 #if defined(__x86_64)
 
-extern void zfs_sha512_transform_x64(uint64_t s[8], const void *, size_t);
+/* Users of ASMABI requires all calls to be from wrappers */
+extern void ASMABI
+zfs_sha512_transform_x64(uint64_t s[8], const void *, size_t);
+
+static inline void
+tf_sha512_transform_x64(uint64_t s[8], const void *d, size_t b)
+{
+	zfs_sha512_transform_x64(s, d, b);
+}
 const sha512_ops_t sha512_x64_impl = {
 	.is_supported = sha2_is_supported,
-	.transform = zfs_sha512_transform_x64,
+	.transform = tf_sha512_transform_x64,
 	.name = "x64"
 };
 
@@ -99,7 +108,7 @@ const sha512_ops_t sha512_armv8_impl = {
 	.name = "armv8-ce"
 };
 
-#elif defined(__arm__)
+#elif defined(__arm__) && __ARM_ARCH > 6
 extern void zfs_sha512_block_armv7(uint64_t s[8], const void *, size_t);
 const sha512_ops_t sha512_armv7_impl = {
 	.is_supported = sha2_is_supported,
@@ -127,14 +136,14 @@ const sha512_ops_t sha512_ppc_impl = {
 	.name = "ppc"
 };
 
-static boolean_t sha512_have_vsx(void)
+static boolean_t sha512_have_isa207(void)
 {
-	return (kfpu_allowed() && zfs_vsx_available());
+	return (kfpu_allowed() && zfs_isa207_available());
 }
 
 TF(zfs_sha512_power8, tf_sha512_power8);
 const sha512_ops_t sha512_power8_impl = {
-	.is_supported = sha512_have_vsx,
+	.is_supported = sha512_have_isa207,
 	.transform = tf_sha512_power8,
 	.name = "power8"
 };
@@ -159,7 +168,7 @@ static const sha512_ops_t *const sha512_impls[] = {
 	&sha512_armv7_impl,
 	&sha512_armv8_impl,
 #endif
-#if defined(__arm__)
+#if defined(__arm__) && __ARM_ARCH > 6
 	&sha512_armv7_impl,
 	&sha512_neon_impl,
 #endif

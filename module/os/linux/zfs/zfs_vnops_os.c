@@ -488,7 +488,7 @@ zfs_lookup(znode_t *zdp, char *nm, znode_t **zpp, int flags, cred_t *cr,
 		 */
 
 		if ((error = zfs_zaccess(*zpp, ACE_EXECUTE, 0,
-		    B_TRUE, cr, kcred->user_ns))) {
+		    B_TRUE, cr, zfs_init_idmap))) {
 			zrele(*zpp);
 			*zpp = NULL;
 		}
@@ -507,7 +507,7 @@ zfs_lookup(znode_t *zdp, char *nm, znode_t **zpp, int flags, cred_t *cr,
 	 */
 
 	if ((error = zfs_zaccess(zdp, ACE_EXECUTE, 0, B_FALSE, cr,
-	    kcred->user_ns))) {
+	    zfs_init_idmap))) {
 		zfs_exit(zfsvfs, FTAG);
 		return (error);
 	}
@@ -552,7 +552,7 @@ zfs_lookup(znode_t *zdp, char *nm, znode_t **zpp, int flags, cred_t *cr,
 int
 zfs_create(znode_t *dzp, char *name, vattr_t *vap, int excl,
     int mode, znode_t **zpp, cred_t *cr, int flag, vsecattr_t *vsecp,
-    zuserns_t *mnt_ns)
+    zidmap_t *mnt_ns)
 {
 	znode_t		*zp;
 	zfsvfs_t	*zfsvfs = ZTOZSB(dzp);
@@ -800,7 +800,7 @@ out:
 int
 zfs_tmpfile(struct inode *dip, vattr_t *vap, int excl,
     int mode, struct inode **ipp, cred_t *cr, int flag, vsecattr_t *vsecp,
-    zuserns_t *mnt_ns)
+    zidmap_t *mnt_ns)
 {
 	(void) excl, (void) mode, (void) flag;
 	znode_t		*zp = NULL, *dzp = ITOZ(dip);
@@ -985,7 +985,7 @@ top:
 		return (error);
 	}
 
-	if ((error = zfs_zaccess_delete(dzp, zp, cr, kcred->user_ns))) {
+	if ((error = zfs_zaccess_delete(dzp, zp, cr, zfs_init_idmap))) {
 		goto out;
 	}
 
@@ -1090,6 +1090,7 @@ top:
 		    !zn_has_cached_data(zp, 0, LLONG_MAX) &&
 		    xattr_obj == xattr_obj_unlinked &&
 		    zfs_external_acl(zp) == acl_obj;
+		VERIFY_IMPLY(xattr_obj_unlinked, xzp);
 	}
 
 	if (delete_now) {
@@ -1179,7 +1180,7 @@ out:
  */
 int
 zfs_mkdir(znode_t *dzp, char *dirname, vattr_t *vap, znode_t **zpp,
-    cred_t *cr, int flags, vsecattr_t *vsecp, zuserns_t *mnt_ns)
+    cred_t *cr, int flags, vsecattr_t *vsecp, zidmap_t *mnt_ns)
 {
 	znode_t		*zp;
 	zfsvfs_t	*zfsvfs = ZTOZSB(dzp);
@@ -1400,7 +1401,7 @@ top:
 		return (error);
 	}
 
-	if ((error = zfs_zaccess_delete(dzp, zp, cr, kcred->user_ns))) {
+	if ((error = zfs_zaccess_delete(dzp, zp, cr, zfs_init_idmap))) {
 		goto out;
 	}
 
@@ -1652,8 +1653,7 @@ out:
  *	RETURN:	0 (always succeeds)
  */
 int
-zfs_getattr_fast(struct user_namespace *user_ns, struct inode *ip,
-    struct kstat *sp)
+zfs_getattr_fast(zidmap_t *user_ns, struct inode *ip, struct kstat *sp)
 {
 	znode_t *zp = ITOZ(ip);
 	zfsvfs_t *zfsvfs = ITOZSB(ip);
@@ -1841,7 +1841,7 @@ next:
  *	ip - ctime updated, mtime updated if size changed.
  */
 int
-zfs_setattr(znode_t *zp, vattr_t *vap, int flags, cred_t *cr, zuserns_t *mnt_ns)
+zfs_setattr(znode_t *zp, vattr_t *vap, int flags, cred_t *cr, zidmap_t *mnt_ns)
 {
 	struct inode	*ip;
 	zfsvfs_t	*zfsvfs = ZTOZSB(zp);
@@ -2038,10 +2038,10 @@ top:
 		 * Take ownership or chgrp to group we are a member of
 		 */
 
-		uid = zfs_uid_to_vfsuid((struct user_namespace *)mnt_ns,
-		    zfs_i_user_ns(ip), vap->va_uid);
-		gid = zfs_gid_to_vfsgid((struct user_namespace *)mnt_ns,
-		    zfs_i_user_ns(ip), vap->va_gid);
+		uid = zfs_uid_to_vfsuid(mnt_ns, zfs_i_user_ns(ip),
+		    vap->va_uid);
+		gid = zfs_gid_to_vfsgid(mnt_ns, zfs_i_user_ns(ip),
+		    vap->va_gid);
 		take_owner = (mask & ATTR_UID) && (uid == crgetuid(cr));
 		take_group = (mask & ATTR_GID) &&
 		    zfs_groupmember(zfsvfs, gid, cr);
@@ -2680,7 +2680,7 @@ zfs_rename_lock(znode_t *szp, znode_t *tdzp, znode_t *sdzp, zfs_zlock_t **zlpp)
  */
 int
 zfs_rename(znode_t *sdzp, char *snm, znode_t *tdzp, char *tnm,
-    cred_t *cr, int flags, uint64_t rflags, vattr_t *wo_vap, zuserns_t *mnt_ns)
+    cred_t *cr, int flags, uint64_t rflags, vattr_t *wo_vap, zidmap_t *mnt_ns)
 {
 	znode_t		*szp, *tzp;
 	zfsvfs_t	*zfsvfs = ZTOZSB(sdzp);
@@ -3213,7 +3213,7 @@ commit_link_szp:
  */
 int
 zfs_symlink(znode_t *dzp, char *name, vattr_t *vap, char *link,
-    znode_t **zpp, cred_t *cr, int flags, zuserns_t *mnt_ns)
+    znode_t **zpp, cred_t *cr, int flags, zidmap_t *mnt_ns)
 {
 	znode_t		*zp;
 	zfs_dirlock_t	*dl;
@@ -3521,7 +3521,7 @@ zfs_link(znode_t *tdzp, znode_t *szp, char *name, cred_t *cr,
 	}
 
 	if ((error = zfs_zaccess(tdzp, ACE_ADD_FILE, 0, B_FALSE, cr,
-	    kcred->user_ns))) {
+	    zfs_init_idmap))) {
 		zfs_exit(zfsvfs, FTAG);
 		return (error);
 	}
@@ -4136,7 +4136,7 @@ zfs_space(znode_t *zp, int cmd, flock64_t *bfp, int flag,
 	 * operates directly on inodes, so we need to check access rights.
 	 */
 	if ((error = zfs_zaccess(zp, ACE_WRITE_DATA, 0, B_FALSE, cr,
-	    kcred->user_ns))) {
+	    zfs_init_idmap))) {
 		zfs_exit(zfsvfs, FTAG);
 		return (error);
 	}

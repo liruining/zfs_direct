@@ -173,6 +173,7 @@ typedef struct dbuf_dirty_record {
 			override_states_t dr_override_state;
 			uint8_t dr_copies;
 			boolean_t dr_nopwrite;
+			boolean_t dr_brtwrite;
 			boolean_t dr_has_raw_params;
 
 			/*
@@ -382,11 +383,13 @@ void dbuf_assign_arcbuf(dmu_buf_impl_t *db, arc_buf_t *buf, dmu_tx_t *tx);
 dbuf_dirty_record_t *dbuf_dirty(dmu_buf_impl_t *db, dmu_tx_t *tx);
 dbuf_dirty_record_t *dbuf_dirty_lightweight(dnode_t *dn, uint64_t blkid,
     dmu_tx_t *tx);
+
 void dmu_buf_direct_mixed_io_wait(dmu_buf_impl_t *db, uint64_t txg,
     boolean_t read);
 void dmu_buf_undirty(dmu_buf_impl_t *db, dmu_tx_t *tx);
 blkptr_t *dmu_buf_get_bp_from_dbuf(dmu_buf_impl_t *db);
 int dmu_buf_untransform_direct(dmu_buf_impl_t *db, spa_t *spa);
+
 arc_buf_t *dbuf_loan_arcbuf(dmu_buf_impl_t *db);
 void dmu_buf_write_embedded(dmu_buf_t *dbuf, void *data,
     bp_embedded_type_t etype, enum zio_compress comp,
